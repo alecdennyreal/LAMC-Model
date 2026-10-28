@@ -278,10 +278,10 @@ function viewHome(){
   h += '<div class="grid3">'+card('Senate','senate','Senate')+card('House','house','House')+card('Governor','governor','Governors')+'</div>';
   h += '<div class="card about" style="margin-top:16px"><h3 style="margin-top:0">About the forecast</h3>'+
     '<p>The model gives a point estimate and a percent chance of winning for all 35 Senate races, all 435 House seats and all 36 governorships on the ballot. It simplifies modern forecasting models while staying accurate, in four stages:</p><ul>'+
-    '<li><b>Fundamentals.</b> A linear model with fixed coefficients combines the national swing (currently '+side+' +'+swing+'), 2020 and 2024 presidential results, the prior race margin where one applies, and incumbency.</li>'+
-    '<li><b>Polling.</b> Polling averages (RealClearPolitics) are blended in, with more weight as Election Day approaches.</li>'+
-    '<li><b>Expert ratings.</b> If the estimate falls outside the range implied by the Cook Political Report rating, it is nudged slightly toward it, as a sanity check.</li>'+
-    '<li><b>Simulation.</b> 20,000 simulated elections, each with a shared national shock plus independent noise for every race. Uncertainty shrinks as Election Day nears. A race\u2019s win probability is the share of simulations a party wins.</li></ul>'+
+    '<li><b>Fundamentals:</b> A linear model with fixed coefficients that combines the national swing (the generic ballot along with an average of the 2024 Presidental and House of Representatives popular vote, which is currently '+side+' +'+swing+'), 2020 and 2024 presidential results, the prior race margin when applicable, and incumbency.</li>'+
+    '<li><b>Polling:</b> Polling averages (sourced from RealClearPolitics) are blended in, with more weight as Election Day approaches.</li>'+
+    '<li><b>Expert ratings:</b> If the estimate falls outside the range implied by the Cook Political Report rating, it is shifted moderately toward it.</li>'+
+    '<li><b>Simulation:</b> The Model runs 20,000 simulated elections, each with a shared national shock plus independent noise for every race. Uncertainty shrinks as Election Day nears. A race\u2019s win probability is the share of simulations a party wins.</li></ul>'+
     '<p style="margin-bottom:0"><a href="https://docs.google.com/document/d/17rbcMbMbSj_chbMoujLA3A7AU7JdrbgmPfM7Tp5UBvw/edit?usp=sharing" target="_blank" rel="noopener">Read the full methodology document</a></p>'+
     '<h3>About me</h3><p style="margin-bottom:0">I am Alec Denny, a senior Economics major at James Madison University. I started this project to apply analytical skills, strengthen data-driven decision-making and build my statistical foundation.</p></div>';
   return h;
