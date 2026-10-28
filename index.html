@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026 LAMC Election Forecaster</title>
+<meta name="description" content="Probabilistic forecasts for the 2026 U.S. Senate, House and gubernatorial elections. Click a state for its race.">
+<style>
+:root{
+  --bg:#f6f6f4; --card:#ffffff; --ink:#1d1d1f; --muted:#5f6368; --line:#dcdcd6; --head:#2b2b2b; --accent:#0070C0;
+  --rf:#C00000; --rh:#DF7966; --dh:#80B1C6; --df:#0070C0; --none:#D9D9D9; --r:#c0392b; --d:#1f6fb5;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#161718; --card:#1f2124; --ink:#ececec; --muted:#a0a4a8; --line:#33363a; --head:#0e0f10; --none:#4a4d51; }
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:70px}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+h1,h2,h3{font-family:Georgia,"Times New Roman",serif;line-height:1.2;margin:0}
+a{color:var(--accent)}
+header.site{background:var(--head);color:#fff;position:sticky;top:0;z-index:20}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+.topbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 24px;padding:10px 0}
+.brand{font:700 20px Georgia,serif;color:#fff;text-decoration:none}
+.brand small{display:block;font:400 12px system-ui,sans-serif;color:#c9c9c9}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{background:none;border:0;color:#d8d8d8;font:600 14px system-ui,sans-serif;padding:8px 12px;border-radius:6px;cursor:pointer}
+nav button:hover{background:#ffffff1f;color:#fff}
+nav button[aria-current="page"]{background:#ffffff2e;color:#fff}
+.stamp{margin-left:auto;font-size:12px;color:#c9c9c9;text-align:right}
+main{padding:28px 16px 40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:960px){.grid2,.grid3{grid-template-columns:minmax(0,1fr)}}
+.muted{color:var(--muted)} .small{font-size:13px}
+.pagehead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:end;justify-content:space-between;margin-bottom:14px}
+.pagehead h2{font-size:26px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}
+.seg button{border:0;background:none;color:var(--ink);padding:7px 12px;font:600 13px system-ui,sans-serif;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+/* chamber summary */
+.sum .nums{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.sum .big{font:700 34px Georgia,serif}
+.sum .r{color:var(--r)} .sum .d{color:var(--d)}
+.bar{display:flex;height:18px;border-radius:9px;overflow:hidden;background:var(--line);position:relative;margin:8px 0 4px}
+.bar i{display:block;height:100%}
+.bar .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.odds{display:flex;gap:10px;margin-top:10px}
+.odds div{flex:1;border-radius:8px;padding:8px 10px;color:#fff}
+.odds .o-r{background:var(--r)} .odds .o-d{background:var(--d)}
+.odds b{font:700 22px Georgia,serif;display:block}
+/* map */
+.mapbox{position:relative}
+svg.map{width:100%;height:auto;display:block}
+svg.map .st{stroke:#fff;stroke-width:.9;cursor:pointer;transition:filter .1s}
+svg.map .st:hover{filter:brightness(1.08)}
+svg.map .st.norace{cursor:default}
+svg.map .st:focus{outline:none;stroke:#111;stroke-width:2.4}
+svg.map .st.sel{stroke:#111;stroke-width:2.8}
+svg.map .lab{font:700 10.5px system-ui,sans-serif;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+svg.map .lead{stroke:#8a8a8a;stroke-width:.7;fill:none;pointer-events:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0 0;font-size:13px;align-items:center}
+.legend span.sw{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:6px;vertical-align:-2px}
+.gradbar{height:12px;width:220px;border-radius:6px;background:linear-gradient(90deg,var(--gd),var(--gm),var(--gr))}
+#tip{position:fixed;z-index:50;pointer-events:none;background:#111;color:#fff;border-radius:6px;padding:6px 9px;font-size:12.5px;line-height:1.35;display:none;max-width:240px}
+/* detail */
+.detail h3{font-size:22px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;color:#fff}
+.chip.gray{background:#6b6f73}
+.pbar{margin:10px 0}
+.pbar .row{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.pbar .track{height:12px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:4px}
+.pbar .track i{display:block;height:100%}
+dl.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:14px 0 0;font-size:14px}
+dl.facts dt{color:var(--muted)} dl.facts dd{margin:0;font-weight:600;text-align:right}
+/* table */
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
+.tools input[type=search]{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;min-width:240px}
+.tablewrap{overflow-x:auto;max-height:560px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:7px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{position:sticky;top:0;background:var(--card);cursor:pointer;user-select:none;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+th[aria-sort="ascending"]::after{content:" \25B2"} th[aria-sort="descending"]::after{content:" \25BC"}
+tbody tr{cursor:pointer} tbody tr:hover{background:#8883} tbody tr.sel{background:#0070c026}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;min-width:54px;text-align:center;border-radius:4px;padding:1px 6px;font-size:12px;font-weight:700;color:#fff}
+.hist text{font:10px system-ui,sans-serif;fill:var(--muted)}
+.err{padding:30px;text-align:center}
+footer{border-top:1px solid var(--line);padding:18px 0 40px;color:var(--muted);font-size:13px}
+.about h3{margin:18px 0 6px;font-size:18px} .about ul{margin:6px 0 0;padding-left:20px}
+</style>
+</head>
+<body>
+<header class="site"><div class="wrap topbar">
+  <a class="brand" href="#home">2026 LAMC Election Forecaster<small>Built and maintained by Alec Denny</small></a>
+  <nav id="nav" aria-label="Sections"></nav>
+  <div class="stamp" id="stamp"></div>
+</div></header>
+<main class="wrap" id="app"></main>
+<footer><div class="wrap">Projections update every Tuesday through Election Day (November 3, 2026). Win probabilities are the share of 20,000 simulated elections each party wins. Not affiliated with any campaign or party.</div></footer>
+<div id="tip" role="tooltip"></div>
+
+<script src="states.js"></script>
+<script src="forecast.js"></script>
+<script>
+(function(){
+"use strict";
+var F = window.FORECAST, ST = window.STATES, app = document.getElementById('app');
+if(!F || !ST){ app.innerHTML = '<div class="card err"><h2>Data failed to load</h2><p>Make sure <code>forecast.js</code> and <code>states.js</code> sit in the same folder as this page.</p></div>'; return; }
+
+var CAT = {RF:{c:'#C00000',t:'#fff',n:'Republican flip'}, RH:{c:'#DF7966',t:'#000',n:'Republican hold'}, DH:{c:'#80B1C6',t:'#000',n:'Democratic hold'}, DF:{c:'#0070C0',t:'#fff',n:'Democratic flip'}};
+var NONE='#D9D9D9';
+var VIEWS = [['home','Home'],['senate','Senate'],['governor','Governors'],['house','House']];
+var OFFICE = {senate:'Senate', governor:'Governor', house:'House'};
+var NOUN = {Senate:'Senate', Governor:'Governor', House:'House'};
+var SMALL = ['VT','NH','MA','RI','CT','NJ','DE','MD','DC'];
+var state = {view:'home', st:null, metric:'proj', sortKey:'close', sortDir:1, filter:'all', q:''};
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function races(o){ return F.races.filter(function(r){return r.office===o;}); }
+function catOf(r){ return (r.proj==='R'?'R':'D') + (r.flip?'F':'H'); }
+function fmtP(p){ if(p<=0) return '<0.1%'; if(p>=1) return '>99.9%'; return (p*100).toFixed(1)+'%'; }
+function fmtM(m){ if(m==null) return '\u2014'; var a=Math.abs(m).toFixed(1); if(m<0) return 'D +'+a; if(m>0) return 'R +'+a; return 'Even'; }
+function partyName(p){ return p==='R'?'Republican':'Democratic'; }
+function mix(a,b,t){ return Math.round(a+(b-a)*t); }
+function probColor(pR){ // blue (D) -> light gray -> red (R)
+  var D=[11,92,171], M=[236,236,236], R=[192,57,43], t, a, b;
+  if(pR<=.5){ t=pR/.5; a=D; b=M; } else { t=(pR-.5)/.5; a=M; b=R; }
+  return 'rgb('+mix(a[0],b[0],t)+','+mix(a[1],b[1],t)+','+mix(a[2],b[2],t)+')';
+}
+function textOn(rgb){ var m=rgb.match(/\d+/g); if(m){ var l=(.299*m[0]+.587*m[1]+.114*m[2]); return l<150?'#fff':'#000'; } return '#000'; }
+function fillFor(r){
+  if(!r) return NONE;
+  return state.metric==='proj' ? CAT[catOf(r)].c : probColor(r.pR);
+}
+function labelColor(r){ if(!r) return '#666'; if(state.metric==='proj') return CAT[catOf(r)].t; return textOn(probColor(r.pR)); }
+function fmtDate(iso){ var d=new Date(iso+'T12:00:00'); return d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}); }
+function raceLabel(r){ var s = r.office==='House' ? 'House' : NOUN[r.office]; if(r.seat) s += ' \u00b7 ' + r.seat; return s; }
+
+/* ---------------- chamber summary ---------------- */
+function chamberSummary(o, compact){
+  var c = F.chambers[o], total = c.projR + c.projD, tick='';
+  if(c.needR!=null){ tick = '<span class="tick" style="left:'+((c.needD-0.5)/total*100).toFixed(2)+'%" title="Majority line"></span>'; }
+  var html = '<div class="sum"><div class="nums"><div><div class="small muted">Republicans</div><div class="big r">'+c.projR+'</div></div>'+
+    '<div class="small muted" style="text-align:center">projected '+(o==='Governor'?'governorships':'seats')+'</div>'+
+    '<div style="text-align:right"><div class="small muted">Democrats</div><div class="big d">'+c.projD+'</div></div></div>'+
+    '<div class="bar" role="img" aria-label="Projected '+c.projR+' Republican, '+c.projD+' Democratic"><i style="width:'+(c.projR/total*100)+'%;background:var(--rh)"></i><i style="width:'+(c.projD/total*100)+'%;background:var(--dh)"></i>'+tick+'</div>';
+  if(c.needR!=null) html += '<div class="small muted">Republicans need '+c.needR+(o==='Senate'?' (VP breaks ties)':'')+' \u00b7 Democrats need '+c.needD+'</div>';
+  if(c.control){
+    html += '<div class="odds"><div class="o-r"><b>'+fmtP(c.control.R)+'</b>Republican chance of control</div><div class="o-d"><b>'+fmtP(c.control.D)+'</b>Democratic chance of control</div></div>';
+    if(!compact && c.meanR!=null) html += '<div class="small muted" style="margin-top:8px">Average Republican '+(o==='Governor'?'wins':'seats')+' across simulations: '+c.meanR+' (90% range '+c.p5+'\u2013'+c.p95+')</div>';
+  }
+  html += '</div>';
+  return html;
+}
+function histogram(o){
+  var c = F.chambers[o]; if(!c.hist) return '';
+  var p=c.hist.p, mn=c.hist.min, n=p.length, W=380, H=100, bw=W/n, mx=Math.max.apply(null,p), bars='', ticks='';
+  for(var i=0;i<n;i++){
+    var v=mn+i, h=p[i]/mx*(H-4), col = (c.needR!=null && v>=c.needR) ? 'var(--r)' : (c.needR!=null?'var(--d)':'#8a8f94');
+    bars += '<rect x="'+(i*bw+.5).toFixed(1)+'" y="'+(H-h).toFixed(1)+'" width="'+Math.max(bw-1,1).toFixed(1)+'" height="'+h.toFixed(1)+'" fill="'+col+'"><title>'+v+' Republican '+(o==='Governor'?'wins':'seats')+': '+(p[i]*100).toFixed(1)+'%</title></rect>';
+  }
+  var step = n>40?10:(n>16?5:2);
+  for(var j=0;j<n;j++){ var vv=mn+j; if(vv%step===0) ticks += '<text x="'+(j*bw+bw/2).toFixed(1)+'" y="'+(H+13)+'" text-anchor="middle">'+vv+'</text>'; }
+  return '<div style="margin-top:14px"><div class="small muted" style="margin-bottom:4px">How often each Republican total occurs in the simulations</div><svg class="hist" viewBox="0 0 '+W+' '+(H+18)+'" style="width:100%;max-width:560px;display:block" role="img" aria-label="Distribution of simulated Republican totals">'+bars+ticks+'</svg></div>';
+}
+
+/* ---------------- map ---------------- */
+function mapSVG(o){
+  var rs = {}; races(o).forEach(function(r){ rs[r.st]=r; });
+  var paths='', labs='', leads='', sq='', abbrs=Object.keys(ST);
+  abbrs.forEach(function(ab){
+    var r=rs[ab], s=ST[ab], cls='st'+(r?'':' norace')+(state.st===ab?' sel':'');
+    var aria = r ? (s.n+': '+CAT[catOf(r)].n+', Republicans '+fmtP(r.pR)+' chance') : (s.n+': no '+NOUN[o]+' race in 2026');
+    paths += '<path class="'+cls+'" data-st="'+ab+'" d="'+s.d+'" fill="'+fillFor(r)+'" fill-rule="evenodd" tabindex="0" role="button" aria-label="'+esc(aria)+'"></path>';
+    if(SMALL.indexOf(ab)<0) labs += '<text class="lab" x="'+s.cx+'" y="'+s.cy+'" fill="'+labelColor(r)+'">'+ab+(r&&r.flip?' *':'')+'</text>';
+  });
+  SMALL.forEach(function(ab,k){
+    if(!ST[ab]) return; var r=rs[ab], y=196+k*27, s=ST[ab], x=992;
+    leads += '<path class="lead" d="M'+s.cx+','+s.cy+'L'+x+','+(y+10)+'"></path>';
+    sq += '<g><rect class="st'+(r?'':' norace')+(state.st===ab?' sel':'')+'" data-st="'+ab+'" x="'+x+'" y="'+y+'" width="40" height="20" rx="3" fill="'+fillFor(r)+'" tabindex="0" role="button" aria-label="'+esc(s.n+(r?': '+CAT[catOf(r)].n:': no race'))+'"></rect>'+
+      '<text class="lab" x="'+(x+20)+'" y="'+(y+10.5)+'" fill="'+labelColor(r)+'">'+ab+(r&&r.flip?' *':'')+'</text></g>';
+  });
+  return '<svg class="map" id="mapsvg" viewBox="0 0 1050 620" role="group" aria-label="Map of 2026 '+NOUN[o]+' races">'+leads+'<g id="paths">'+paths+'</g><g id="smalls">'+sq+'</g><g>'+labs+'</g></svg>';
+}
+function legendHTML(){
+  if(state.metric==='proj'){
+    return ['RF','RH','DH','DF'].map(function(k){ return '<span><span class="sw" style="background:'+CAT[k].c+'"></span>'+CAT[k].n+'</span>'; }).join('') +
+      '<span><span class="sw" style="background:'+NONE+'"></span>No race in 2026</span><span class="muted">* = seat changes party</span>';
+  }
+  return '<span>Democrats favored</span><span class="gradbar" style="--gd:'+probColor(0)+';--gm:'+probColor(.5)+';--gr:'+probColor(1)+'"></span><span>Republicans favored</span><span><span class="sw" style="background:'+NONE+'"></span>No race</span>';
+}
+
+/* ---------------- detail panel ---------------- */
+function detailHTML(o, ab){
+  if(!ab) return '<div class="muted"><h3 style="color:var(--ink)">Select a state</h3><p>Click any state on the map, or any row in the table, to see the full race: win probabilities, projected margin and who is defending the seat.</p></div>';
+  var r = races(o).filter(function(x){return x.st===ab;})[0], name = ST[ab] ? ST[ab].n : ab;
+  if(!r) return '<h3>'+esc(name)+'</h3><p class="muted">There is no '+NOUN[o]+' race in '+esc(name)+' in 2026.</p>';
+  return raceDetail(r);
+}
+function raceDetail(r){
+  var c = CAT[catOf(r)], chips = '<span class="chip" style="background:'+c.c+';color:'+c.t+'">'+c.n+'</span>';
+  if(r.rating) chips += '<span class="chip gray">Cook: '+esc(r.rating)+'</span>';
+  var pD = 1-r.pR, nameR = r.rep?(' \u2014 '+esc(r.rep)):'', nameD = r.dem?(' \u2014 '+esc(r.dem)):'';
+  var h = '<h3>'+esc(r.name)+'</h3><div class="muted small">'+esc(raceLabel(r))+'</div><div class="chips">'+chips+'</div>';
+  if(r.unc) h += '<p class="small"><b>Uncontested.</b> '+partyName(r.unc)+'s have no opponent, so this seat is counted as an automatic '+r.unc+' win.</p>';
+  h += '<div class="pbar"><div class="row"><span style="color:var(--r)">Republican'+nameR+'</span><span>'+fmtP(r.pR)+'</span></div><div class="track"><i style="width:'+(r.pR*100)+'%;background:var(--r)"></i></div></div>'+
+       '<div class="pbar"><div class="row"><span style="color:var(--d)">Democratic'+nameD+'</span><span>'+fmtP(pD)+'</span></div><div class="track"><i style="width:'+(pD*100)+'%;background:var(--d)"></i></div></div>';
+  var adj = r.adj ? (r.adj<0?'D +':'R +')+Math.abs(r.adj).toFixed(1) : 'None';
+  h += '<dl class="facts"><dt>Projected winner</dt><dd>'+partyName(r.proj)+(r.flip?' (flip)':' (hold)')+'</dd>'+
+       '<dt>Projected margin</dt><dd>'+(r.unc?'Uncontested':fmtM(r.margin))+'</dd>'+
+       '<dt>'+(r.office==='House'?'2024 winner':'Defending party')+'</dt><dd>'+partyName(r.def)+'</dd>'+
+       (r.unc?'':'<dt>Candidate-quality adjustment</dt><dd>'+adj+'</dd>')+
+       (r.seat?'<dt>Seat type</dt><dd>'+esc(r.seat)+'</dd>':'')+'</dl>';
+  h += '<p class="small muted" style="margin-top:12px">Margin is the model point estimate before the simulations. Probability is the share of 20,000 simulations each party wins.</p>';
+  return h;
+}
+
+/* ---------------- table ---------------- */
+function tableRows(o){
+  var rows = races(o).slice(), q = state.q.trim().toLowerCase();
+  rows = rows.filter(function(r){
+    if(q && (r.name+' '+r.id+' '+(r.dem||'')+' '+(r.rep||'')).toLowerCase().indexOf(q)<0) return false;
+    if(state.filter==='comp') return r.pR>=.1 && r.pR<=.9;
+    if(state.filter==='flip') return r.flip;
+    return true;
+  });
+  var k=state.sortKey, d=state.sortDir;
+  var val = {name:function(r){return r.name;}, def:function(r){return r.def;}, proj:function(r){return catOf(r);}, close:function(r){return Math.abs(r.pR-.5);}, prob:function(r){return r.pR;}, probD:function(r){return 1-r.pR;}, margin:function(r){return r.margin==null?(r.unc==='R'?999:-999):r.margin;}, rating:function(r){return r.rating||'';}}[k];
+  rows.sort(function(a,b){ var x=val(a), y=val(b); return (x<y?-1:x>y?1:0)*d || (a.name<b.name?-1:1); });
+  return rows;
+}
+function tableHTML(o){
+  var rows = tableRows(o), showRating = F.meta.hasRatings;
+  var cols = [['name','Race'],['def',o==='House'?'2024 winner':'Defending'],['proj','Projection'],['prob','Rep. chance'],['dem','Dem. chance'],['margin','Margin']];
+  if(showRating) cols.push(['rating','Cook rating']);
+  var head = cols.map(function(c){ var key=c[0]; var sk = key==='dem'?'probD':key; var sorted = state.sortKey===sk; var asc = state.sortDir===1;
+    return '<th data-sort="'+sk+'" aria-sort="'+(sorted?(asc?'ascending':'descending'):'none')+'">'+c[1]+'</th>'; }).join('');
+  var body = rows.map(function(r){
+    var c=CAT[catOf(r)], sel = (state.st===r.st && r.office!=='House') || (state.st===r.id) ;
+    return '<tr data-id="'+r.id+'" class="'+(sel?'sel':'')+'" tabindex="0"><td><b>'+esc(r.name)+'</b></td><td><span class="tag" style="background:'+(r.def==='R'?'var(--r)':'var(--d)')+'">'+r.def+'</span></td>'+
+      '<td><span class="tag" style="background:'+c.c+';color:'+c.t+'">'+(r.proj)+(r.flip?' flip':' hold')+'</span></td>'+
+      '<td class="num">'+fmtP(r.pR)+'</td><td class="num">'+fmtP(1-r.pR)+'</td><td class="num">'+(r.unc?'Uncontested':fmtM(r.margin))+'</td>'+
+      (showRating?'<td>'+esc(r.rating||'\u2014')+'</td>':'')+'</tr>';
+  }).join('');
+  if(!rows.length) body = '<tr><td colspan="'+cols.length+'" class="muted">No races match.</td></tr>';
+  return '<div class="tablewrap"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div><div class="small muted" style="margin-top:6px">'+rows.length+' race'+(rows.length===1?'':'s')+' shown, closest races first. Click a column heading to sort.</div>';
+}
+function toolsHTML(){
+  function b(k,t){ return '<button data-filter="'+k+'" aria-pressed="'+(state.filter===k)+'">'+t+'</button>'; }
+  return '<div class="tools"><input type="search" id="q" placeholder="Search races or candidates" value="'+esc(state.q)+'" aria-label="Search races"><div class="seg">'+b('all','All')+b('comp','Competitive (10\u201390%)')+b('flip','Flips')+'</div></div>';
+}
+
+/* ---------------- views ---------------- */
+function viewRace(o){
+  var cap = o==='Senate' ? 'Senate' : 'Governors';
+  var h = '<div class="pagehead"><div><h2>2026 '+cap+' Forecast</h2><div class="muted small">'+(o==='Senate'?'35 seats up, including 3 special elections':'36 governorships up')+'. Click a state for the full race.</div></div>'+
+    '<div class="seg" role="group" aria-label="Map coloring"><button data-metric="proj" aria-pressed="'+(state.metric==='proj')+'">Projected result</button><button data-metric="prob" aria-pressed="'+(state.metric==='prob')+'">Chance of winning</button></div></div>';
+  h += '<div class="card sum" style="margin-bottom:16px">'+chamberSummary(o,false)+histogram(o)+'</div>';
+  h += '<div class="grid2"><div class="card"><div class="mapbox" id="mapbox">'+mapSVG(o)+'</div><div class="legend" id="legend">'+legendHTML()+'</div></div>'+
+       '<aside class="card detail" id="detail" aria-live="polite">'+detailHTML(o,state.st)+'</aside></div>';
+  h += '<div class="card" style="margin-top:16px"><h3 style="margin-bottom:10px">All '+(o==='Senate'?'Senate':'gubernatorial')+' races</h3>'+toolsHTML()+'<div id="tbl">'+tableHTML(o)+'</div></div>';
+  return h;
+}
+function viewHouse(){
+  var h = '<div class="pagehead"><div><h2>2026 House Forecast</h2><div class="muted small">All 435 seats. A district-level map is coming next; for now, search or sort every district below.</div></div></div>';
+  h += '<div class="grid2"><div class="card sum">'+chamberSummary('House',false)+histogram('House')+'</div><aside class="card detail" id="detail" aria-live="polite">'+
+       (state.st && F.races.filter(function(r){return r.id===state.st;})[0] ? raceDetail(F.races.filter(function(r){return r.id===state.st;})[0]) : detailHTML('House',null))+'</aside></div>';
+  h += '<div class="card" style="margin-top:16px"><h3 style="margin-bottom:10px">All House districts</h3>'+toolsHTML()+'<div id="tbl">'+tableHTML('House')+'</div></div>';
+  return h;
+}
+function viewHome(){
+  var swing = Math.abs(F.meta.swingGop).toFixed(1), side = F.meta.swingGop<0?'D':'R';
+  function card(o,view,title){ return '<div class="card"><h3 style="margin-bottom:10px">'+title+'</h3>'+chamberSummary(o,true)+'<p style="margin:12px 0 0"><a href="#'+view+'" data-go="'+view+'">View '+title+' forecast \u2192</a></p></div>'; }
+  var h = '<div class="pagehead"><div><h2>2026 LAMC Election Forecaster</h2><div class="muted">Forecasts for the 2026 U.S. Senate, House of Representatives and governors\u2019 races.</div></div></div>';
+  h += '<div class="grid3">'+card('Senate','senate','Senate')+card('House','house','House')+card('Governor','governor','Governors')+'</div>';
+  h += '<div class="card about" style="margin-top:16px"><h3 style="margin-top:0">About the forecast</h3>'+
+    '<p>The model gives a point estimate and a percent chance of winning for all 35 Senate races, all 435 House seats and all 36 governorships on the ballot. It simplifies modern forecasting models while staying accurate, in four stages:</p><ul>'+
+    '<li><b>Fundamentals.</b> A linear model with fixed coefficients combines the national swing (currently '+side+' +'+swing+'), 2020 and 2024 presidential results, the prior race margin where one applies, and incumbency.</li>'+
+    '<li><b>Polling.</b> Polling averages (RealClearPolitics) are blended in, with more weight as Election Day approaches.</li>'+
+    '<li><b>Expert ratings.</b> If the estimate falls outside the range implied by the Cook Political Report rating, it is nudged slightly toward it, as a sanity check.</li>'+
+    '<li><b>Simulation.</b> 20,000 simulated elections, each with a shared national shock plus independent noise for every race. Uncertainty shrinks as Election Day nears. A race\u2019s win probability is the share of simulations a party wins.</li></ul>'+
+    '<p style="margin-bottom:0"><a href="https://docs.google.com/document/d/17rbcMbMbSj_chbMoujLA3A7AU7JdrbgmPfM7Tp5UBvw/edit?usp=sharing" target="_blank" rel="noopener">Read the full methodology document</a></p>'+
+    '<h3>About me</h3><p style="margin-bottom:0">I am Alec Denny, a senior Economics major at James Madison University. I started this project to apply analytical skills, strengthen data-driven decision-making and build my statistical foundation.</p></div>';
+  return h;
+}
+
+/* ---------------- rendering + events ---------------- */
+function renderNav(){
+  document.getElementById('nav').innerHTML = VIEWS.map(function(v){ return '<button data-go="'+v[0]+'"'+(state.view===v[0]?' aria-current="page"':'')+'>'+v[1]+'</button>'; }).join('');
+  document.getElementById('stamp').innerHTML = 'Updated '+fmtDate(F.meta.updated)+'<br>'+F.meta.days+' day'+(F.meta.days===1?'':'s')+' until Election Day';
+}
+function render(){
+  renderNav();
+  app.innerHTML = state.view==='home' ? viewHome() : state.view==='house' ? viewHouse() : viewRace(OFFICE[state.view]);
+  document.title = (state.view==='home'?'':VIEWS.filter(function(v){return v[0]===state.view;})[0][1]+' \u00b7 ')+'2026 LAMC Election Forecaster';
+}
+function setHash(){ var h='#'+state.view+(state.st?'/'+state.st:''); if(location.hash!==h) history.replaceState(null,'',h); }
+function parseHash(){
+  var p = location.hash.replace(/^#/,'').split('/'), v = p[0]||'home';
+  state.view = VIEWS.some(function(x){return x[0]===v;}) ? v : 'home';
+  var s = (p[1]||'').toUpperCase(); state.st = null;
+  if(state.view==='house'){ var m=F.races.filter(function(r){return r.id.toUpperCase()===s;})[0]; state.st = m?m.id:null; }
+  else if(s && ST[s]) state.st = s;
+}
+function go(view){ state.view=view; state.st=null; state.filter='all'; state.q=''; state.sortKey='close'; state.sortDir=1; setHash(); render(); window.scrollTo(0,0); }
+function select(key){
+  state.st = key; setHash();
+  var o = OFFICE[state.view], det = document.getElementById('detail');
+  if(state.view==='house'){ var r=F.races.filter(function(x){return x.id===key;})[0]; if(det) det.innerHTML = r?raceDetail(r):''; }
+  else { if(det) det.innerHTML = detailHTML(o,key); }
+  document.querySelectorAll('svg.map .st').forEach(function(el){ var on = el.getAttribute('data-st')===state.st; el.classList.toggle('sel',on); if(on && el.parentNode.id==='paths') el.parentNode.appendChild(el); });
+  var t=document.getElementById('tbl'); if(t) t.innerHTML = tableHTML(o);
+  if(window.innerWidth<=960 && det) det.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+var tip = document.getElementById('tip');
+app.addEventListener('click', function(e){
+  var go_ = e.target.closest('[data-go]'); if(go_){ e.preventDefault(); go(go_.getAttribute('data-go')); return; }
+  var m = e.target.closest('[data-metric]'); if(m){ state.metric=m.getAttribute('data-metric'); render(); return; }
+  var f = e.target.closest('[data-filter]'); if(f){ state.filter=f.getAttribute('data-filter'); document.getElementById('tbl').innerHTML=tableHTML(OFFICE[state.view]); document.querySelectorAll('[data-filter]').forEach(function(b){b.setAttribute('aria-pressed',String(b===f));}); return; }
+  var th = e.target.closest('th[data-sort]'); if(th){ var k=th.getAttribute('data-sort'); if(state.sortKey===k) state.sortDir*=-1; else {state.sortKey=k; state.sortDir=(k==='name'||k==='def'||k==='proj')?1:-1;} document.getElementById('tbl').innerHTML=tableHTML(OFFICE[state.view]); return; }
+  var tr = e.target.closest('tr[data-id]'); if(tr){ var id=tr.getAttribute('data-id'); select(state.view==='house'?id:id.split('-')[0]); return; }
+  var s = e.target.closest('[data-st]'); if(s){ select(s.getAttribute('data-st')); }
+});
+app.addEventListener('keydown', function(e){
+  if(e.key!=='Enter' && e.key!==' ') return;
+  var s = e.target.closest('[data-st]'), tr = e.target.closest('tr[data-id]');
+  if(s){ e.preventDefault(); select(s.getAttribute('data-st')); } else if(tr){ e.preventDefault(); var id=tr.getAttribute('data-id'); select(state.view==='house'?id:id.split('-')[0]); }
+});
+app.addEventListener('input', function(e){ if(e.target.id==='q'){ state.q=e.target.value; document.getElementById('tbl').innerHTML=tableHTML(OFFICE[state.view]); } });
+app.addEventListener('mousemove', function(e){
+  var s = e.target.closest && e.target.closest('svg.map [data-st]');
+  if(!s){ tip.style.display='none'; return; }
+  var ab=s.getAttribute('data-st'), o=OFFICE[state.view], r=races(o).filter(function(x){return x.st===ab;})[0], n=ST[ab].n;
+  tip.innerHTML = r ? '<b>'+esc(n)+'</b><br>Rep. '+fmtP(r.pR)+' \u00b7 Dem. '+fmtP(1-r.pR)+'<br>'+CAT[catOf(r)].n+(r.unc?' (uncontested)':'') : '<b>'+esc(n)+'</b><br>No '+NOUN[o]+' race in 2026';
+  tip.style.display='block'; tip.style.left=Math.min(e.clientX+14, window.innerWidth-250)+'px'; tip.style.top=(e.clientY+14)+'px';
+});
+app.addEventListener('mouseout', function(e){ if(!app.contains(e.relatedTarget)) tip.style.display='none'; });
+window.addEventListener('hashchange', function(){ parseHash(); render(); });
+document.getElementById('nav').addEventListener('click', function(e){ var b=e.target.closest('[data-go]'); if(b) go(b.getAttribute('data-go')); });
+document.querySelector('.brand').addEventListener('click', function(e){ e.preventDefault(); go('home'); });
+
+parseHash(); render();
+})();
+</script>
+</body>
+</html>
