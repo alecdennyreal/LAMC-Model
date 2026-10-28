@@ -218,9 +218,9 @@ function detailHTML(o, ab){
 function raceDetail(r){
   var c = CAT[catOf(r)], chips = '<span class="chip" style="background:'+c.c+';color:'+c.t+'">'+c.n+'</span>';
   if(r.rating) chips += '<span class="chip gray">Cook: '+esc(r.rating)+'</span>';
-  var pD = 1-r.pR, nameR = r.rep?(' \u2014 '+esc(r.rep)):'', nameD = r.dem?(' \u2014 '+esc(r.dem)):'';
+  var pD = 1-r.pR, nameR = r.rep?(' \u2014 '+esc(r.rep)):(r.unc==='D'?' \u2014 no candidate':''), nameD = r.dem?(' \u2014 '+esc(r.dem)):(r.unc==='R'?' \u2014 no candidate':'');
   var h = '<h3>'+esc(r.name)+'</h3><div class="muted small">'+esc(raceLabel(r))+'</div><div class="chips">'+chips+'</div>';
-  if(r.unc) h += '<p class="small"><b>Uncontested.</b> '+partyName(r.unc)+'s have no opponent, so this seat is counted as an automatic '+r.unc+' win.</p>';
+  if(r.unc) h += '<p class="small"><b>Uncontested.</b> Only a '+partyName(r.unc)+' candidate is on the ballot, so this seat is counted as an automatic '+partyName(r.unc)+' win.</p>';
   h += '<div class="pbar"><div class="row"><span style="color:var(--r)">Republican'+nameR+'</span><span>'+fmtP(r.pR)+'</span></div><div class="track"><i style="width:'+(r.pR*100)+'%;background:var(--r)"></i></div></div>'+
        '<div class="pbar"><div class="row"><span style="color:var(--d)">Democratic'+nameD+'</span><span>'+fmtP(pD)+'</span></div><div class="track"><i style="width:'+(pD*100)+'%;background:var(--d)"></i></div></div>';
   var adj = r.adj ? (r.adj<0?'D +':'R +')+Math.abs(r.adj).toFixed(1) : 'None';
@@ -228,7 +228,7 @@ function raceDetail(r){
        '<dt>Projected margin</dt><dd>'+(r.unc?'Uncontested':fmtM(r.margin))+'</dd>'+
        '<dt>'+(r.office==='House'?'2024 winner':'Defending party')+'</dt><dd>'+partyName(r.def)+'</dd>'+
        (r.unc?'':'<dt>Candidate-quality adjustment</dt><dd>'+adj+'</dd>')+
-       (r.seat?'<dt>Seat type</dt><dd>'+esc(r.seat)+'</dd>':'')+'</dl>';
+       (r.seat?'<dt>Seat type</dt><dd>'+esc(r.seat)+'</dd>':'')+(r.other?'<dt>Other candidates</dt><dd>'+esc(r.other)+'</dd>':'')+'</dl>';
   h += '<p class="small muted" style="margin-top:12px">Margin is the model point estimate before the simulations. Probability is the share of 20,000 simulations each party wins.</p>';
   return h;
 }
