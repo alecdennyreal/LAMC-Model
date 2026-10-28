@@ -1,0 +1,104 @@
+# Rebuilds the forecast and publishes the website.
+#  - every Tuesday at 14:00 UTC (10 AM Eastern)            -> re-run the model, publish
+#  - whenever you change anything inside /model             -> re-run the model, publish
+#  - whenever you change index.html (or any other file)     -> just publish (the model is NOT re-run)
+#  - manually: Actions tab > "Update forecast and publish site" > Run workflow
+name: Update forecast and publish site
+
+on:
+  schedule:
+    - cron: "0 14 * * 2"
+  workflow_dispatch:
+    inputs:
+      as_of:
+        description: "Optional run date (YYYY-MM-DD). Leave blank to use today."
+        required: false
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether the model needs to run
+        id: chg
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          run=true
+          if [ "$EVENT" = "push" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            changed=$(git diff --name-only "$BEFORE" "$SHA" -- model/ || true)
+            if [ -z "$changed" ]; then run=false; fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "Run the model: $run"
+
+      - uses: actions/setup-python@v5
+        if: steps.chg.outputs.run == 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: model/requirements.txt
+
+      - name: Install packages
+        if: steps.chg.outputs.run == 'true'
+        run: pip install -r model/requirements.txt
+
+      - name: Run the model and write the website data
+        if: steps.chg.outputs.run == 'true'
+        working-directory: model
+        env:
+          AS_OF: ${{ github.event.inputs.as_of }}
+        run: |
+          args="--quiet --no-images --outdir out --site-dir .."
+          if [ -n "$AS_OF" ]; then args="$args --as-of $AS_OF"; fi
+          python LAMC_tracker.py $args
+
+      - name: Save the new forecast to the repo
+        if: steps.chg.outputs.run == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add forecast.js forecast.json states.js house_tiles.js
+          if git diff --staged --quiet; then
+            echo "Forecast unchanged - nothing to commit"
+          else
+            git commit -m "Update forecast $(date -u +%F)"
+            git push
+          fi
+
+      - name: Collect the website files
+        run: |
+          mkdir _site
+          cp index.html forecast.js states.js house_tiles.js _site/
+          if [ -f CNAME ]; then cp CNAME _site/; fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
