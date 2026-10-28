@@ -274,10 +274,10 @@ function viewHouse(){
 function viewHome(){
   var swing = Math.abs(F.meta.swingGop).toFixed(1), side = F.meta.swingGop<0?'D':'R';
   function card(o,view,title){ return '<div class="card"><h3 style="margin-bottom:10px">'+title+'</h3>'+chamberSummary(o,true)+'<p style="margin:12px 0 0"><a href="#'+view+'" data-go="'+view+'">View '+title+' forecast \u2192</a></p></div>'; }
-  var h = '<div class="pagehead"><div><h2>2026 LAMC Election Forecaster</h2><div class="muted">Forecasts for the 2026 U.S. Senate, House of Representatives and governors\u2019 races.</div></div></div>';
+  var h = '<div class="pagehead"><div><h2>2026 LAMC Election Forecaster</h2><div class="muted">Forecasts for the 2026 U.S. Senate, House of Representatives and Governors\u2019 races.</div></div></div>';
   h += '<div class="grid3">'+card('Senate','senate','Senate')+card('House','house','House')+card('Governor','governor','Governors')+'</div>';
   h += '<div class="card about" style="margin-top:16px"><h3 style="margin-top:0">About the forecast</h3>'+
-    '<p>The model gives a point estimate and a percent chance of winning for all 35 Senate races, all 435 House seats and all 36 governorships on the ballot. It simplifies modern forecasting models while staying accurate, in four stages:</p><ul>'+
+    '<p>The model gives a point estimate and a percent chance of winning for all 35 Senate races, all 435 House seats and all 36 governorships on the ballot. LAMC looks to simplify professional forecasting models while maintaining accuracy, in four stages:</p><ul>'+
     '<li><b>Fundamentals:</b> A linear model with fixed coefficients that combines the national swing (the generic ballot along with an average of the 2024 Presidental and House of Representatives popular vote, which is currently '+side+' +'+swing+'), 2020 and 2024 presidential results, the prior race margin when applicable, and incumbency.</li>'+
     '<li><b>Polling:</b> Polling averages (sourced from RealClearPolitics) are blended in, with more weight as Election Day approaches.</li>'+
     '<li><b>Expert ratings:</b> If the estimate falls outside the range implied by the Cook Political Report rating, it is shifted moderately toward it.</li>'+
