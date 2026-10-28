@@ -8,10 +8,10 @@
 <style>
 :root{
   --bg:#f6f6f4; --card:#ffffff; --ink:#1d1d1f; --muted:#5f6368; --line:#dcdcd6; --head:#2b2b2b; --accent:#0070C0;
-  --rf:#C00000; --rh:#DF7966; --dh:#80B1C6; --df:#0070C0; --none:#D9D9D9; --r:#c0392b; --d:#1f6fb5;
+  --hsf:#ECEBE6; --rf:#C00000; --rh:#DF7966; --dh:#80B1C6; --df:#0070C0; --none:#D9D9D9; --r:#c0392b; --d:#1f6fb5;
 }
 @media (prefers-color-scheme: dark){
-  :root{ --bg:#161718; --card:#1f2124; --ink:#ececec; --muted:#a0a4a8; --line:#33363a; --head:#0e0f10; --none:#4a4d51; }
+  :root{ --bg:#161718; --card:#1f2124; --ink:#ececec; --muted:#a0a4a8; --line:#33363a; --head:#0e0f10; --none:#4a4d51; --hsf:#33363a; }
 }
 *{box-sizing:border-box}
 html{scroll-padding-top:70px}
@@ -63,6 +63,19 @@ svg.map .lead{stroke:#8a8a8a;stroke-width:.7;fill:none;pointer-events:none}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0 0;font-size:13px;align-items:center}
 .legend span.sw{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:6px;vertical-align:-2px}
 .gradbar{height:12px;width:220px;border-radius:6px;background:linear-gradient(90deg,var(--gd),var(--gm),var(--gr))}
+svg.map .hs{fill:var(--hsf);stroke:#fff;stroke-width:.9;cursor:pointer;vector-effect:non-scaling-stroke}
+svg.map .hs.nohouse{cursor:default}
+svg.map .hs.dim{opacity:.5} svg.map .hs.sel{stroke:#111;stroke-width:2}
+svg.map .hs:focus,svg.map .tile:focus{outline:none;stroke:#111;stroke-width:2.2}
+svg.map .tile{stroke:#fff;stroke-width:.6;cursor:pointer;vector-effect:non-scaling-stroke}
+svg.map .tile.dim{opacity:0;pointer-events:none} svg.map .tile.sel{stroke:#111;stroke-width:2.4}
+svg.map .tlab{display:none;font-family:system-ui,sans-serif;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+svg.map.zoomed .tlab{display:block} svg.map .tlab.dim{display:none!important} svg.map.zoomed .lead{display:none} svg.map .lead{vector-effect:non-scaling-stroke}
+.mapbtn{position:absolute;left:8px;top:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 10px;font:600 13px system-ui,sans-serif;cursor:pointer;display:none}
+.mapbtn.on{display:block}
+.dgrid{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 0}
+.dchip{border:1px solid #0003;border-radius:6px;min-width:34px;padding:4px 6px;font:700 12.5px system-ui,sans-serif;cursor:pointer}
+.dchip.sel{outline:2px solid var(--ink)}
 #tip{position:fixed;z-index:50;pointer-events:none;background:#111;color:#fff;border-radius:6px;padding:6px 9px;font-size:12.5px;line-height:1.35;display:none;max-width:240px}
 /* detail */
 .detail h3{font-size:22px}
@@ -103,6 +116,7 @@ footer{border-top:1px solid var(--line);padding:18px 0 40px;color:var(--muted);f
 <div id="tip" role="tooltip"></div>
 
 <script src="states.js"></script>
+<script src="house_tiles.js"></script>
 <script src="forecast.js"></script>
 <script>
 (function(){
@@ -116,7 +130,7 @@ var VIEWS = [['home','Home'],['senate','Senate'],['governor','Governors'],['hous
 var OFFICE = {senate:'Senate', governor:'Governor', house:'House'};
 var NOUN = {Senate:'Senate', Governor:'Governor', House:'House'};
 var SMALL = ['VT','NH','MA','RI','CT','NJ','DE','MD','DC'];
-var state = {view:'home', st:null, metric:'proj', sortKey:'close', sortDir:1, filter:'all', q:''};
+var state = {view:'home', st:null, hs:null, hd:null, vb:[0,0,1050,620], metric:'proj', sortKey:'close', sortDir:1, filter:'all', q:''};
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 function races(o){ return F.races.filter(function(r){return r.office===o;}); }
@@ -186,11 +200,12 @@ function mapSVG(o){
   return '<svg class="map" id="mapsvg" viewBox="0 0 1050 620" role="group" aria-label="Map of 2026 '+NOUN[o]+' races">'+leads+'<g id="paths">'+paths+'</g><g id="smalls">'+sq+'</g><g>'+labs+'</g></svg>';
 }
 function legendHTML(){
+  var hv = state.view==='house';
   if(state.metric==='proj'){
     return ['RF','RH','DH','DF'].map(function(k){ return '<span><span class="sw" style="background:'+CAT[k].c+'"></span>'+CAT[k].n+'</span>'; }).join('') +
-      '<span><span class="sw" style="background:'+NONE+'"></span>No race in 2026</span><span class="muted">* = seat changes party</span>';
+      (hv ? '<span class="muted">Each square is one district</span>' : '<span><span class="sw" style="background:'+NONE+'"></span>No race in 2026</span><span class="muted">* = seat changes party</span>');
   }
-  return '<span>Democrats favored</span><span class="gradbar" style="--gd:'+probColor(0)+';--gm:'+probColor(.5)+';--gr:'+probColor(1)+'"></span><span>Republicans favored</span><span><span class="sw" style="background:'+NONE+'"></span>No race</span>';
+  return '<span>Democrats favored</span><span class="gradbar" style="--gd:'+probColor(0)+';--gm:'+probColor(.5)+';--gr:'+probColor(1)+'"></span><span>Republicans favored</span>'+(hv?'':'<span><span class="sw" style="background:'+NONE+'"></span>No race</span>');
 }
 
 /* ---------------- detail panel ---------------- */
@@ -222,6 +237,7 @@ function raceDetail(r){
 function tableRows(o){
   var rows = races(o).slice(), q = state.q.trim().toLowerCase();
   rows = rows.filter(function(r){
+    if(o==='House' && state.hs && r.st!==state.hs) return false;
     if(q && (r.name+' '+r.id+' '+(r.dem||'')+' '+(r.rep||'')).toLowerCase().indexOf(q)<0) return false;
     if(state.filter==='comp') return r.pR>=.1 && r.pR<=.9;
     if(state.filter==='flip') return r.flip;
@@ -239,14 +255,14 @@ function tableHTML(o){
   var head = cols.map(function(c){ var key=c[0]; var sk = key==='dem'?'probD':key; var sorted = state.sortKey===sk; var asc = state.sortDir===1;
     return '<th data-sort="'+sk+'" aria-sort="'+(sorted?(asc?'ascending':'descending'):'none')+'">'+c[1]+'</th>'; }).join('');
   var body = rows.map(function(r){
-    var c=CAT[catOf(r)], sel = (state.st===r.st && r.office!=='House') || (state.st===r.id) ;
+    var c=CAT[catOf(r)], sel = r.office==='House' ? state.hd===r.id : state.st===r.st;
     return '<tr data-id="'+r.id+'" class="'+(sel?'sel':'')+'" tabindex="0"><td><b>'+esc(r.name)+'</b></td><td><span class="tag" style="background:'+(r.def==='R'?'var(--r)':'var(--d)')+'">'+r.def+'</span></td>'+
       '<td><span class="tag" style="background:'+c.c+';color:'+c.t+'">'+(r.proj)+(r.flip?' flip':' hold')+'</span></td>'+
       '<td class="num">'+fmtP(r.pR)+'</td><td class="num">'+fmtP(1-r.pR)+'</td><td class="num">'+(r.unc?'Uncontested':fmtM(r.margin))+'</td>'+
       (showRating?'<td>'+esc(r.rating||'\u2014')+'</td>':'')+'</tr>';
   }).join('');
   if(!rows.length) body = '<tr><td colspan="'+cols.length+'" class="muted">No races match.</td></tr>';
-  return '<div class="tablewrap"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div><div class="small muted" style="margin-top:6px">'+rows.length+' race'+(rows.length===1?'':'s')+' shown, closest races first. Click a column heading to sort.</div>';
+  return '<div class="tablewrap"><table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></div><div class="small muted" style="margin-top:6px">'+rows.length+' race'+(rows.length===1?'':'s')+' shown, closest races first. Click a column heading to sort.'+((o==='House'&&state.hs)?' Showing only '+esc(ST[state.hs].n)+'. <a href="#" data-reset>Show all districts</a>':'')+'</div>';
 }
 function toolsHTML(){
   function b(k,t){ return '<button data-filter="'+k+'" aria-pressed="'+(state.filter===k)+'">'+t+'</button>'; }
@@ -265,19 +281,104 @@ function viewRace(o){
   return h;
 }
 function viewHouse(){
-  var h = '<div class="pagehead"><div><h2>2026 House Forecast</h2><div class="muted small">All 435 seats. A district-level map is coming next; for now, search or sort every district below.</div></div></div>';
-  h += '<div class="grid2"><div class="card sum">'+chamberSummary('House',false)+histogram('House')+'</div><aside class="card detail" id="detail" aria-live="polite">'+
-       (state.st && F.races.filter(function(r){return r.id===state.st;})[0] ? raceDetail(F.races.filter(function(r){return r.id===state.st;})[0]) : detailHTML('House',null))+'</aside></div>';
+  var hasTiles = !!window.HOUSE_TILES;
+  var h = '<div class="pagehead"><div><h2>2026 House Forecast</h2><div class="muted small">All 435 districts. Each square is a district placed inside its state: click a state to zoom in, or click any square.</div></div>'+
+    '<div class="seg" role="group" aria-label="Map coloring"><button data-metric="proj" aria-pressed="'+(state.metric==='proj')+'">Projected result</button><button data-metric="prob" aria-pressed="'+(state.metric==='prob')+'">Chance of winning</button></div></div>';
+  h += '<div class="card sum" style="margin-bottom:16px">'+chamberSummary('House',false)+histogram('House')+'</div>';
+  if(hasTiles){
+    h += '<div class="grid2"><div class="card"><div class="mapbox" id="mapbox">'+houseMapSVG()+'<button class="mapbtn'+(state.hs?' on':'')+'" id="resetbtn" data-reset>\u2190 Back to U.S.</button></div><div class="legend" id="legend">'+legendHTML()+'</div></div>'+
+         '<aside class="card detail" id="detail" aria-live="polite">'+houseDetail()+'</aside></div>';
+  } else {
+    h += '<div class="grid2"><div class="card muted">The district map needs <code>house_tiles.js</code> next to this page.</div><aside class="card detail" id="detail" aria-live="polite">'+houseDetail()+'</aside></div>';
+  }
   h += '<div class="card" style="margin-top:16px"><h3 style="margin-bottom:10px">All House districts</h3>'+toolsHTML()+'<div id="tbl">'+tableHTML('House')+'</div></div>';
   return h;
 }
+/* ---------------- House map ---------------- */
+var RATIO = 1050/620, DEFAULT_VB = [0,0,1050,620], anim = null;
+function houseRaces(ab){ return races('House').filter(function(r){return r.st===ab;}).sort(function(a,b){return a.id<b.id?-1:1;}); }
+function fitBox(b){
+  var pad=.16, w=Math.max((b[2]-b[0])*(1+2*pad), (b[3]-b[1])*(1+2*pad)*RATIO, 140), h=w/RATIO, cx=(b[0]+b[2])/2, cy=(b[1]+b[3])/2;
+  return [cx-w/2, cy-h/2, w, h];
+}
+function targetVB(){ return (state.hs && window.HOUSE_FOCUS && HOUSE_FOCUS[state.hs]) ? fitBox(HOUSE_FOCUS[state.hs]) : DEFAULT_VB.slice(); }
+function setVB(v){ state.vb=v; var svg=document.getElementById('mapsvg'); if(svg) svg.setAttribute('viewBox', v.join(' ')); }
+function animateVB(target){
+  if(anim) cancelAnimationFrame(anim);
+  var from=state.vb.slice(), t0=null, dur=450;
+  function step(t){ if(t0==null) t0=t; var k=Math.min(1,(t-t0)/dur); k = k<.5 ? 2*k*k : 1-Math.pow(-2*k+2,2)/2;
+    setVB(from.map(function(f,i){return f+(target[i]-f)*k;})); if(k<1) anim=requestAnimationFrame(step); else anim=null; }
+  anim=requestAnimationFrame(step);
+}
+function tileLabel(id){ var t=id.split('-')[1]; return t==='AL'?'AL':String(parseInt(t,10)); }
+function houseMapSVG(){
+  var T=window.HOUSE_TILES, rs={}, paths='', tiles='', sq='', leads='', k=0;
+  races('House').forEach(function(r){ rs[r.id]=r; });
+  var hasH = {}; Object.keys(T).forEach(function(id){ hasH[id.split('-')[0]]=1; });
+  Object.keys(ST).forEach(function(ab){
+    var s=ST[ab], on=!!hasH[ab], cls='hs'+(on?'':' nohouse')+(state.hs===ab?' sel':'')+((state.hs&&state.hs!==ab)?' dim':'');
+    paths += '<path class="'+cls+'" data-hs="'+(on?ab:'')+'" d="'+s.d+'" fill-rule="evenodd"'+(on?' tabindex="0" role="button" aria-label="'+esc(s.n+': '+houseRaces(ab).length+' districts')+'"':'')+'></path>';
+  });
+  Object.keys(T).forEach(function(id){
+    var r=rs[id]; if(!r) return; var t=T[id], x=t[0], y=t[1], z=t[2], ab=id.split('-')[0];
+    var cls='tile'+(state.hd===id?' sel':'')+((state.hs&&state.hs!==ab)?' dim':'');
+    tiles += '<rect class="'+cls+'" data-d="'+id+'" x="'+(x-z/2).toFixed(1)+'" y="'+(y-z/2).toFixed(1)+'" width="'+z+'" height="'+z+'" rx="'+(z*.15).toFixed(1)+'" fill="'+fillFor(r)+'" tabindex="0" role="button" aria-label="'+esc(r.name+': '+CAT[catOf(r)].n+', Republicans '+fmtP(r.pR)+' chance')+'"></rect>'+
+             '<text class="tlab'+((state.hs&&state.hs!==ab)?' dim':'')+'" data-lt="'+ab+'" x="'+x+'" y="'+y+'" font-size="'+(z*.5).toFixed(1)+'" fill="'+labelColor(r)+'">'+tileLabel(id)+'</text>';
+  });
+  SMALL.forEach(function(ab,i){
+    if(!hasH[ab]) return; var s=ST[ab], y=196+k*27, x=992; k++;
+    leads += '<path class="lead" d="M'+s.cx+','+s.cy+'L'+x+','+(y+10)+'"></path>';
+    sq += '<g><rect class="hs'+(state.hs===ab?' sel':'')+'" data-hs="'+ab+'" x="'+x+'" y="'+y+'" width="40" height="20" rx="3" tabindex="0" role="button" aria-label="'+esc(s.n)+'"></rect><text class="lab" x="'+(x+20)+'" y="'+(y+10.5)+'" fill="currentColor">'+ab+'</text></g>';
+  });
+  return '<svg class="map'+(state.hs?' zoomed':'')+'" id="mapsvg" viewBox="'+state.vb.join(' ')+'" role="group" aria-label="Map of 2026 House districts">'+leads+'<g>'+paths+'</g><g>'+sq+'</g><g id="tiles">'+tiles+'</g></svg>';
+}
+function chips(list){
+  return '<div class="dgrid">'+list.map(function(r){ var c=CAT[catOf(r)];
+    return '<button class="dchip'+(state.hd===r.id?' sel':'')+'" data-d="'+r.id+'" style="background:'+(state.metric==='proj'?c.c:probColor(r.pR))+';color:'+(state.metric==='proj'?c.t:textOn(probColor(r.pR)))+'" title="'+esc(r.name+' \u00b7 Rep. '+fmtP(r.pR))+'">'+tileLabel(r.id)+'</button>'; }).join('')+'</div>';
+}
+function stateSummary(ab){
+  var rs=houseRaces(ab), n=rs.length, pr=rs.filter(function(r){return r.proj==='R';}).length, pd=n-pr,
+      br=rs.filter(function(r){return r.def==='R';}).length, bd=n-br, fl=rs.filter(function(r){return r.flip;}),
+      comp=rs.filter(function(r){return r.pR>=.1 && r.pR<=.9;}), nm=ST[ab].n;
+  var h='<h3>'+esc(nm)+'</h3><div class="muted small">House delegation \u00b7 '+n+' district'+(n===1?'':'s')+'</div>'+
+    '<div class="bar" style="margin-top:12px"><i style="width:'+(pr/n*100)+'%;background:var(--rh)"></i><i style="width:'+(pd/n*100)+'%;background:var(--dh)"></i></div>'+
+    '<dl class="facts"><dt>Projected</dt><dd><span style="color:var(--r)">R '+pr+'</span> \u2013 <span style="color:var(--d)">D '+pd+'</span></dd>'+
+    '<dt>2024 result</dt><dd><span style="color:var(--r)">R '+br+'</span> \u2013 <span style="color:var(--d)">D '+bd+'</span></dd>'+
+    '<dt>Seats projected to flip</dt><dd>'+(fl.length?fl.map(function(r){return r.id;}).join(', '):'None')+'</dd></dl>';
+  if(comp.length>1 || (comp.length===1 && n>1)) h+='<div class="small muted" style="margin-top:12px">Competitive districts (10\u201390%)</div>'+chips(comp);
+  h+='<div class="small muted" style="margin-top:12px">All districts</div>'+chips(rs)+'<p class="small muted" style="margin-top:12px">Click a district for its full race.</p>';
+  return h;
+}
+function houseDetail(){
+  if(state.hd){ var r=F.races.filter(function(x){return x.id===state.hd;})[0];
+    if(r) return raceDetail(r)+'<p style="margin:14px 0 0"><a href="#" data-pickstate="'+r.st+'">\u2190 All '+esc(ST[r.st].n)+' districts</a></p>'; }
+  if(state.hs) return stateSummary(state.hs);
+  var all=races('House'), fl=all.filter(function(r){return r.flip;}).length;
+  return '<div class="muted"><h3 style="color:var(--ink)">Select a state or district</h3><p>Click a state to zoom in on its districts, or click any square on the map. '+fl+' of 435 districts are projected to change parties.</p></div>';
+}
+function houseUI(){
+  var svg=document.getElementById('mapsvg'); if(!svg) return;
+  svg.classList.toggle('zoomed', !!state.hs);
+  svg.querySelectorAll('.hs').forEach(function(el){ var a=el.getAttribute('data-hs'); el.classList.toggle('sel', !!a && a===state.hs); el.classList.toggle('dim', !!state.hs && a!==state.hs); });
+  svg.querySelectorAll('.tile').forEach(function(el){ var id=el.getAttribute('data-d'); el.classList.toggle('sel', id===state.hd); el.classList.toggle('dim', !!state.hs && id.slice(0,2)!==state.hs); });
+  svg.querySelectorAll('.tlab').forEach(function(el){ el.classList.toggle('dim', !!state.hs && el.getAttribute('data-lt')!==state.hs); });
+  var rb=document.getElementById('resetbtn'); if(rb) rb.classList.toggle('on', !!state.hs);
+  document.getElementById('detail').innerHTML = houseDetail();
+  document.getElementById('tbl').innerHTML = tableHTML('House');
+  setHash(); animateVB(targetVB());
+}
+function selectHouseState(ab){ if(!ab) return; state.hs=ab; state.hd=null; houseUI(); }
+function selectDistrict(id){ var r=F.races.filter(function(x){return x.id===id;})[0]; if(!r) return; var zoom = state.hs!==r.st; state.hs=r.st; state.hd=id; houseUI(); if(window.innerWidth<=960){ var d=document.getElementById('detail'); if(d) d.scrollIntoView({behavior:'smooth',block:'nearest'}); } }
+function resetHouse(){ state.hs=null; state.hd=null; houseUI(); }
+function pickRow(id){ if(state.view==='house') selectDistrict(id); else select(id.split('-')[0]); }
+
 function viewHome(){
   var swing = Math.abs(F.meta.swingGop).toFixed(1), side = F.meta.swingGop<0?'D':'R';
   function card(o,view,title){ return '<div class="card"><h3 style="margin-bottom:10px">'+title+'</h3>'+chamberSummary(o,true)+'<p style="margin:12px 0 0"><a href="#'+view+'" data-go="'+view+'">View '+title+' forecast \u2192</a></p></div>'; }
-  var h = '<div class="pagehead"><div><h2>2026 LAMC Election Forecaster</h2><div class="muted">Forecasts for the 2026 U.S. Senate, House of Representatives and Governors\u2019 races.</div></div></div>';
+  var h = '<div class="pagehead"><div><h2>2026 LAMC Election Forecaster</h2><div class="muted">Forecasts for the 2026 U.S. Senate, House of Representatives and governors\u2019 races.</div></div></div>';
   h += '<div class="grid3">'+card('Senate','senate','Senate')+card('House','house','House')+card('Governor','governor','Governors')+'</div>';
   h += '<div class="card about" style="margin-top:16px"><h3 style="margin-top:0">About the forecast</h3>'+
-    '<p>The model gives a point estimate and a percent chance of winning for all 35 Senate races, all 435 House seats and all 36 governorships on the ballot. LAMC looks to simplify professional forecasting models while maintaining accuracy, in four stages:</p><ul>'+
+    '<p>The model gives a point estimate and a percent chance of winning for all 35 Senate races, all 435 House seats and all 36 governorships on the ballot. It simplifies modern forecasting models while staying accurate, in four stages:</p><ul>'+
     '<li><b>Fundamentals:</b> A linear model with fixed coefficients that combines the national swing (the generic ballot along with an average of the 2024 Presidental and House of Representatives popular vote, which is currently '+side+' +'+swing+'), 2020 and 2024 presidential results, the prior race margin when applicable, and incumbency.</li>'+
     '<li><b>Polling:</b> Polling averages (sourced from RealClearPolitics) are blended in, with more weight as Election Day approaches.</li>'+
     '<li><b>Expert ratings:</b> If the estimate falls outside the range implied by the Cook Political Report rating, it is shifted moderately toward it.</li>'+
@@ -297,20 +398,23 @@ function render(){
   app.innerHTML = state.view==='home' ? viewHome() : state.view==='house' ? viewHouse() : viewRace(OFFICE[state.view]);
   document.title = (state.view==='home'?'':VIEWS.filter(function(v){return v[0]===state.view;})[0][1]+' \u00b7 ')+'2026 LAMC Election Forecaster';
 }
-function setHash(){ var h='#'+state.view+(state.st?'/'+state.st:''); if(location.hash!==h) history.replaceState(null,'',h); }
+function setHash(){ var h='#'+state.view+(state.view==='house' ? (state.hd?'/'+state.hd:(state.hs?'/'+state.hs:'')) : (state.st?'/'+state.st:'')); if(location.hash!==h) history.replaceState(null,'',h); }
 function parseHash(){
   var p = location.hash.replace(/^#/,'').split('/'), v = p[0]||'home';
   state.view = VIEWS.some(function(x){return x[0]===v;}) ? v : 'home';
   var s = (p[1]||'').toUpperCase(); state.st = null;
-  if(state.view==='house'){ var m=F.races.filter(function(r){return r.id.toUpperCase()===s;})[0]; state.st = m?m.id:null; }
-  else if(s && ST[s]) state.st = s;
+  state.hs=null; state.hd=null;
+  if(state.view==='house'){
+    var m=F.races.filter(function(r){return r.id.toUpperCase()===s;})[0];
+    if(m){ state.hd=m.id; state.hs=m.st; } else if(window.HOUSE_FOCUS && HOUSE_FOCUS[s]) state.hs=s;
+    state.vb = targetVB();
+  } else if(s && ST[s]) state.st = s;
 }
-function go(view){ state.view=view; state.st=null; state.filter='all'; state.q=''; state.sortKey='close'; state.sortDir=1; setHash(); render(); window.scrollTo(0,0); }
+function go(view){ state.view=view; state.st=null; state.hs=null; state.hd=null; state.vb=DEFAULT_VB.slice(); state.filter='all'; state.q=''; state.sortKey='close'; state.sortDir=1; setHash(); render(); window.scrollTo(0,0); }
 function select(key){
   state.st = key; setHash();
   var o = OFFICE[state.view], det = document.getElementById('detail');
-  if(state.view==='house'){ var r=F.races.filter(function(x){return x.id===key;})[0]; if(det) det.innerHTML = r?raceDetail(r):''; }
-  else { if(det) det.innerHTML = detailHTML(o,key); }
+  if(det) det.innerHTML = detailHTML(o,key);
   document.querySelectorAll('svg.map .st').forEach(function(el){ var on = el.getAttribute('data-st')===state.st; el.classList.toggle('sel',on); if(on && el.parentNode.id==='paths') el.parentNode.appendChild(el); });
   var t=document.getElementById('tbl'); if(t) t.innerHTML = tableHTML(o);
   if(window.innerWidth<=960 && det) det.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -318,19 +422,32 @@ function select(key){
 var tip = document.getElementById('tip');
 app.addEventListener('click', function(e){
   var go_ = e.target.closest('[data-go]'); if(go_){ e.preventDefault(); go(go_.getAttribute('data-go')); return; }
+  var rs_ = e.target.closest('[data-reset]'); if(rs_){ e.preventDefault(); resetHouse(); return; }
+  var ps_ = e.target.closest('[data-pickstate]'); if(ps_){ e.preventDefault(); selectHouseState(ps_.getAttribute('data-pickstate')); return; }
+  var dd_ = e.target.closest('[data-d]'); if(dd_){ selectDistrict(dd_.getAttribute('data-d')); return; }
+  var hs_ = e.target.closest('[data-hs]'); if(hs_){ if(hs_.getAttribute('data-hs')) selectHouseState(hs_.getAttribute('data-hs')); return; }
   var m = e.target.closest('[data-metric]'); if(m){ state.metric=m.getAttribute('data-metric'); render(); return; }
   var f = e.target.closest('[data-filter]'); if(f){ state.filter=f.getAttribute('data-filter'); document.getElementById('tbl').innerHTML=tableHTML(OFFICE[state.view]); document.querySelectorAll('[data-filter]').forEach(function(b){b.setAttribute('aria-pressed',String(b===f));}); return; }
   var th = e.target.closest('th[data-sort]'); if(th){ var k=th.getAttribute('data-sort'); if(state.sortKey===k) state.sortDir*=-1; else {state.sortKey=k; state.sortDir=(k==='name'||k==='def'||k==='proj')?1:-1;} document.getElementById('tbl').innerHTML=tableHTML(OFFICE[state.view]); return; }
-  var tr = e.target.closest('tr[data-id]'); if(tr){ var id=tr.getAttribute('data-id'); select(state.view==='house'?id:id.split('-')[0]); return; }
+  var tr = e.target.closest('tr[data-id]'); if(tr){ pickRow(tr.getAttribute('data-id')); return; }
   var s = e.target.closest('[data-st]'); if(s){ select(s.getAttribute('data-st')); }
 });
 app.addEventListener('keydown', function(e){
   if(e.key!=='Enter' && e.key!==' ') return;
+  var hd2 = e.target.closest('[data-d],[data-hs]');
+  if(hd2){ e.preventDefault(); if(hd2.getAttribute('data-d')) selectDistrict(hd2.getAttribute('data-d')); else if(hd2.getAttribute('data-hs')) selectHouseState(hd2.getAttribute('data-hs')); return; }
   var s = e.target.closest('[data-st]'), tr = e.target.closest('tr[data-id]');
-  if(s){ e.preventDefault(); select(s.getAttribute('data-st')); } else if(tr){ e.preventDefault(); var id=tr.getAttribute('data-id'); select(state.view==='house'?id:id.split('-')[0]); }
+  if(s){ e.preventDefault(); select(s.getAttribute('data-st')); } else if(tr){ e.preventDefault(); pickRow(tr.getAttribute('data-id')); }
 });
 app.addEventListener('input', function(e){ if(e.target.id==='q'){ state.q=e.target.value; document.getElementById('tbl').innerHTML=tableHTML(OFFICE[state.view]); } });
 app.addEventListener('mousemove', function(e){
+  if(state.view==='house'){
+    var tl = e.target.closest && e.target.closest('svg.map .tile'), hh = e.target.closest && e.target.closest('svg.map .hs[data-hs]'), html='';
+    if(tl){ var rr=F.races.filter(function(x){return x.id===tl.getAttribute('data-d');})[0]; if(rr) html='<b>'+esc(rr.name)+'</b><br>Rep. '+fmtP(rr.pR)+' \u00b7 Dem. '+fmtP(1-rr.pR)+'<br>'+CAT[catOf(rr)].n+(rr.unc?' (uncontested)':''); }
+    else if(hh && hh.getAttribute('data-hs')){ var q=houseRaces(hh.getAttribute('data-hs')), pr=q.filter(function(x){return x.proj==='R';}).length; html='<b>'+esc(ST[hh.getAttribute('data-hs')].n)+'</b><br>Projected R '+pr+' \u2013 D '+(q.length-pr)+'<br>Click to zoom in'; }
+    if(!html){ tip.style.display='none'; return; }
+    tip.innerHTML=html; tip.style.display='block'; tip.style.left=Math.min(e.clientX+14, window.innerWidth-250)+'px'; tip.style.top=(e.clientY+14)+'px'; return;
+  }
   var s = e.target.closest && e.target.closest('svg.map [data-st]');
   if(!s){ tip.style.display='none'; return; }
   var ab=s.getAttribute('data-st'), o=OFFICE[state.view], r=races(o).filter(function(x){return x.st===ab;})[0], n=ST[ab].n;
