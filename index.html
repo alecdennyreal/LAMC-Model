@@ -229,7 +229,7 @@ function raceDetail(r){
        '<dt>'+(r.office==='House'?'2024 winner':'Defending party')+'</dt><dd>'+partyName(r.def)+'</dd>'+
        (r.unc?'':'<dt>Candidate-quality adjustment</dt><dd>'+adj+'</dd>')+
        (r.seat?'<dt>Seat type</dt><dd>'+esc(r.seat)+'</dd>':'')+(r.other?'<dt>Other candidates</dt><dd>'+esc(r.other)+'</dd>':'')+'</dl>';
-  h += '<p class="small muted" style="margin-top:12px">Margin is the model point estimate before the simulations. Probability is the share of 20,000 simulations each party wins.</p>';
+  h += '<p class="small muted" style="margin-top:12px">Margin is the model point estimate before the simulations. Probability is the share of 100,000 simulations each party wins.</p>';
   return h;
 }
 
@@ -266,7 +266,7 @@ function tableHTML(o){
 }
 function toolsHTML(){
   function b(k,t){ return '<button data-filter="'+k+'" aria-pressed="'+(state.filter===k)+'">'+t+'</button>'; }
-  return '<div class="tools"><input type="search" id="q" placeholder="Search races or candidates" value="'+esc(state.q)+'" aria-label="Search races"><div class="seg">'+b('all','All')+b('comp','Competitive (25\u201375%)')+b('flip','Flips')+'</div></div>';
+  return '<div class="tools"><input type="search" id="q" placeholder="Search races or candidates" value="'+esc(state.q)+'" aria-label="Search races"><div class="seg">'+b('all','All')+b('comp','Competitive (10\u201390%)')+b('flip','Flips')+'</div></div>';
 }
 
 /* ---------------- views ---------------- */
@@ -345,7 +345,7 @@ function stateSummary(ab){
     '<dl class="facts"><dt>Projected</dt><dd><span style="color:var(--r)">R '+pr+'</span> \u2013 <span style="color:var(--d)">D '+pd+'</span></dd>'+
     '<dt>2024 result</dt><dd><span style="color:var(--r)">R '+br+'</span> \u2013 <span style="color:var(--d)">D '+bd+'</span></dd>'+
     '<dt>Seats projected to flip</dt><dd>'+(fl.length?fl.map(function(r){return r.id;}).join(', '):'None')+'</dd></dl>';
-  if(comp.length>1 || (comp.length===1 && n>1)) h+='<div class="small muted" style="margin-top:12px">Competitive districts (25\u201375%)</div>'+chips(comp);
+  if(comp.length>1 || (comp.length===1 && n>1)) h+='<div class="small muted" style="margin-top:12px">Competitive districts (10\u201390%)</div>'+chips(comp);
   h+='<div class="small muted" style="margin-top:12px">All districts</div>'+chips(rs)+'<p class="small muted" style="margin-top:12px">Click a district for its full race.</p>';
   return h;
 }
@@ -382,7 +382,7 @@ function viewHome(){
     '<li><b>Fundamentals:</b> A linear model with fixed coefficients that combines the national swing (the generic ballot along with an average of the 2024 Presidental and House of Representatives popular vote, which is currently '+side+' +'+swing+'), 2020 and 2024 presidential results, the prior race margin when applicable, and incumbency.</li>'+
     '<li><b>Polling:</b> Polling averages (sourced from RealClearPolitics) are blended in, with more weight as Election Day approaches.</li>'+
     '<li><b>Expert ratings:</b> If the estimate falls outside the range implied by the Cook Political Report rating, it is shifted moderately toward it.</li>'+
-    '<li><b>Simulation:</b> The Model runs 20,000 simulated elections, each with a shared national shock plus independent noise for every race. Uncertainty shrinks as Election Day nears. A race\u2019s win probability is the share of simulations a party wins.</li></ul>'+
+    '<li><b>Simulation:</b> The Model runs 100,000 simulated elections, each with a shared national shock plus independent noise for every race. Uncertainty shrinks as Election Day nears. A race\u2019s win probability is the share of simulations a party wins.</li></ul>'+
     '<p style="margin-bottom:0"><a href="https://docs.google.com/document/d/17rbcMbMbSj_chbMoujLA3A7AU7JdrbgmPfM7Tp5UBvw/edit?usp=sharing" target="_blank" rel="noopener">Read the full methodology document</a></p>'+
     '<h3>About me</h3><p style="margin-bottom:0">I am Alec Denny, a senior Economics major at James Madison University. I started this project to apply analytical skills, strengthen data-driven decision-making and build my statistical foundation.</p></div>';
   return h;
