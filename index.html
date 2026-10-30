@@ -266,7 +266,7 @@ function tableHTML(o){
 }
 function toolsHTML(){
   function b(k,t){ return '<button data-filter="'+k+'" aria-pressed="'+(state.filter===k)+'">'+t+'</button>'; }
-  return '<div class="tools"><input type="search" id="q" placeholder="Search races or candidates" value="'+esc(state.q)+'" aria-label="Search races"><div class="seg">'+b('all','All')+b('comp','Competitive (10\u201390%)')+b('flip','Flips')+'</div></div>';
+  return '<div class="tools"><input type="search" id="q" placeholder="Search races or candidates" value="'+esc(state.q)+'" aria-label="Search races"><div class="seg">'+b('all','All')+b('comp','Competitive (25\u201375%)')+b('flip','Flips')+'</div></div>';
 }
 
 /* ---------------- views ---------------- */
@@ -345,7 +345,7 @@ function stateSummary(ab){
     '<dl class="facts"><dt>Projected</dt><dd><span style="color:var(--r)">R '+pr+'</span> \u2013 <span style="color:var(--d)">D '+pd+'</span></dd>'+
     '<dt>2024 result</dt><dd><span style="color:var(--r)">R '+br+'</span> \u2013 <span style="color:var(--d)">D '+bd+'</span></dd>'+
     '<dt>Seats projected to flip</dt><dd>'+(fl.length?fl.map(function(r){return r.id;}).join(', '):'None')+'</dd></dl>';
-  if(comp.length>1 || (comp.length===1 && n>1)) h+='<div class="small muted" style="margin-top:12px">Competitive districts (10\u201390%)</div>'+chips(comp);
+  if(comp.length>1 || (comp.length===1 && n>1)) h+='<div class="small muted" style="margin-top:12px">Competitive districts (25\u201375%)</div>'+chips(comp);
   h+='<div class="small muted" style="margin-top:12px">All districts</div>'+chips(rs)+'<p class="small muted" style="margin-top:12px">Click a district for its full race.</p>';
   return h;
 }
